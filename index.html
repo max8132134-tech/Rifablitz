@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="RifaMax - Plataforma de rifas en línea. Crea y participa en rifas de forma fácil y segura.">
+    <title>RifaMax — Iniciar Sesión</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <!-- Logo -->
+            <div class="logo-section">
+                <div class="logo-icon">🎟️</div>
+                <h1>RifaMax</h1>
+                <p>Crea y participa en rifas en línea</p>
+            </div>
+
+            <!-- Step 1: Google Sign In -->
+            <div id="auth-step-1" class="auth-step active">
+                <div class="form-group">
+                    <label for="user-name">👤 Tu nombre</label>
+                    <input type="text" id="user-name" class="form-control" placeholder="Escribe tu nombre" required>
+                </div>
+                <div class="form-group">
+                    <label for="user-email">📧 Tu email</label>
+                    <input type="email" id="user-email" class="form-control" placeholder="correo@gmail.com" required>
+                </div>
+                <button id="btn-next-step" class="btn btn-primary btn-block">
+                    Siguiente
+                </button>
+            </div>
+
+            <!-- Step 2: Phone Verification -->
+            <div id="auth-step-2" class="auth-step">
+                <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 8px;">Verificar teléfono</h2>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;">
+                    Necesitamos tu número para completar el registro
+                </p>
+                <form id="phone-form">
+                    <div class="form-group">
+                        <label>Número de teléfono</label>
+                        <div class="phone-input-group">
+                            <select id="country-code" class="form-control country-code">
+                                <option value="+52">🇲🇽 +52</option>
+                                <option value="+1">🇺🇸 +1</option>
+                                <option value="+34">🇪🇸 +34</option>
+                                <option value="+57">🇨🇴 +57</option>
+                                <option value="+54">🇦🇷 +54</option>
+                                <option value="+56">🇨🇱 +56</option>
+                                <option value="+51">🇵🇪 +51</option>
+                            </select>
+                            <input type="tel" id="phone-number" class="form-control phone-number"
+                                placeholder="10 dígitos" maxlength="15" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        📱 Enviar código de verificación
+                    </button>
+                </form>
+            </div>
+
+            <!-- Step 3: Enter Code -->
+            <div id="auth-step-3" class="auth-step">
+                <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 8px;">Código de verificación</h2>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;">
+                    Ingresa el código que enviamos a tu teléfono
+                </p>
+                <div class="form-group">
+                    <label>Código</label>
+                    <input type="text" id="verification-code" class="form-control"
+                        placeholder="Ingresa el código (demo: cualquier código)" maxlength="6">
+                </div>
+                <button id="btn-verify-code" class="btn btn-success btn-block">
+                    ✅ Verificar y entrar
+                </button>
+                <p style="text-align: center; margin-top: 16px; font-size: 0.85rem; color: var(--text-muted);">
+                    ¿No recibiste el código? <a href="#"
+                        onclick="showToast('Código reenviado', 'success'); return false;"
+                        style="color: var(--accent-4); text-decoration: none;">Reenviar</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/firebase-config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

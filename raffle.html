@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="RifaMax - Selecciona tus boletos y participa en la rifa.">
+    <title>RifaMax — Rifa</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="page-wrapper">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="container">
+                <a href="dashboard.html" class="navbar-brand">
+                    <div class="logo-icon">🎟️</div>
+                    <span>RifaMax</span>
+                </a>
+                <ul class="navbar-nav">
+                    <li><a href="dashboard.html">Inicio</a></li>
+                    <li><a href="create-raffle.html">Crear Rifa</a></li>
+                </ul>
+                <div class="navbar-user">
+                    <div class="user-avatar">?</div>
+                    <span class="user-name">Usuario</span>
+                    <button class="btn btn-logout" onclick="logout()">Salir</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="container">
+            <div class="page-header">
+                <h1 id="raffle-title">Cargando rifa...</h1>
+                <p id="raffle-description"></p>
+            </div>
+
+            <!-- Winner section (hidden by default) -->
+            <div id="winner-section" class="winner-section" style="display:none;">
+                <div class="trophy-icon">🏆</div>
+                <h2>¡Tenemos un ganador!</h2>
+                <div class="winner-name" id="winner-name"></div>
+                <div class="winner-ticket" id="winner-ticket"></div>
+            </div>
+
+            <div class="raffle-detail">
+                <!-- Tickets -->
+                <div>
+                    <div class="ticket-grid-container">
+                        <div class="ticket-grid-header">
+                            <div class="ticket-legend">
+                                <div class="legend-item">
+                                    <div class="legend-dot available"></div>
+                                    <span>Disponible</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-dot selected"></div>
+                                    <span>Seleccionado</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-dot sold"></div>
+                                    <span>Vendido</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-dot mine"></div>
+                                    <span>Mis boletos</span>
+                                </div>
+                            </div>
+                            <div class="ticket-search">
+                                <input type="number" id="ticket-search-input" placeholder="Buscar #..." min="1">
+                                <button class="btn btn-sm btn-secondary" onclick="searchTicket()">🔍</button>
+                            </div>
+                        </div>
+                        <div id="ticket-grid" class="ticket-grid">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Raffle Info Sidebar -->
+                <div>
+                    <div class="raffle-info-card">
+                        <h2 id="sidebar-title">Info de la Rifa</h2>
+                        <p id="sidebar-description"
+                            style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 16px;"></p>
+
+                        <div class="info-row">
+                            <span class="info-label">Creador</span>
+                            <span class="info-value" id="info-creator">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total boletos</span>
+                            <span class="info-value" id="info-total-tickets">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Vendidos</span>
+                            <span class="info-value" id="info-sold-tickets">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Precio</span>
+                            <span class="info-value" id="info-price">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Fecha sorteo</span>
+                            <span class="info-value" id="info-date">—</span>
+                        </div>
+
+                        <div class="progress-bar" style="margin: 16px 0;">
+                            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <p style="text-align: center; font-size: 0.85rem; color: var(--text-muted);" id="progress-text">
+                            0% vendido</p>
+
+                        <!-- Selection Summary -->
+                        <div class="selection-summary" id="selection-summary" style="display:none;">
+                            <h3>🎫 Boletos seleccionados</h3>
+                            <div class="selected-tickets-list" id="selected-tickets-list">
+                                <!-- Populated by JS -->
+                            </div>
+                            <div class="total-row">
+                                <span>Total:</span>
+                                <span id="selection-total">$0.00</span>
+                            </div>
+                            <button class="btn btn-success btn-block" style="margin-top: 16px;"
+                                onclick="confirmPurchase()">
+                                ✅ Confirmar Compra
+                            </button>
+                        </div>
+
+                        <!-- Owner actions -->
+                        <div id="owner-actions" style="display:none; margin-top: 20px;">
+                            <button class="btn btn-primary btn-block" onclick="drawWinner()" id="btn-draw">
+                                🎲 Realizar Sorteo
+                            </button>
+                            <button class="btn btn-outline btn-block" style="margin-top: 8px;" onclick="shareRaffle()">
+                                📤 Compartir Rifa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" id="confirm-modal">
+        <div class="modal">
+            <h2>🎟️ Confirmar Compra</h2>
+            <p id="confirm-modal-text">¿Deseas confirmar la compra de estos boletos?</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-success" onclick="processPurchase()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/firebase-config.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/raffle.js"></script>
+</body>
+
+</html>

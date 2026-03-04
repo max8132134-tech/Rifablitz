@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="RifaMax - Crea una nueva rifa en línea con boletos personalizados.">
+    <title>RifaMax — Crear Rifa</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="page-wrapper">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="container">
+                <a href="dashboard.html" class="navbar-brand">
+                    <div class="logo-icon">🎟️</div>
+                    <span>RifaMax</span>
+                </a>
+                <ul class="navbar-nav">
+                    <li><a href="dashboard.html">Inicio</a></li>
+                    <li><a href="create-raffle.html" class="active">Crear Rifa</a></li>
+                </ul>
+                <div class="navbar-user">
+                    <div class="user-avatar">?</div>
+                    <span class="user-name">Usuario</span>
+                    <button class="btn btn-logout" onclick="logout()">Salir</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="container">
+            <div class="page-header">
+                <h1>Crear Nueva Rifa</h1>
+                <p>Configura tu rifa y define cuántos boletos deseas vender</p>
+            </div>
+
+            <div class="raffle-detail">
+                <!-- Form -->
+                <div>
+                    <div class="card" style="cursor:default; transform:none;">
+                        <form id="create-raffle-form">
+                            <div class="form-group">
+                                <label for="raffle-name">🏷️ Nombre de la rifa *</label>
+                                <input type="text" id="raffle-name" class="form-control"
+                                    placeholder="Ej: iPhone 16 Pro Max" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="raffle-description">📝 Descripción</label>
+                                <textarea id="raffle-description" class="form-control"
+                                    placeholder="Describe el premio y los detalles de la rifa..."></textarea>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div class="form-group">
+                                    <label for="raffle-tickets">🎫 Número de boletos *</label>
+                                    <input type="number" id="raffle-tickets" class="form-control" placeholder="100"
+                                        min="2" max="10000" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="raffle-price">💰 Precio por boleto ($) *</label>
+                                    <input type="number" id="raffle-price" class="form-control" placeholder="50" min="0"
+                                        step="0.01" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="raffle-date">📅 Fecha del sorteo *</label>
+                                <input type="datetime-local" id="raffle-date" class="form-control" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="raffle-image">🖼️ URL de imagen del premio (opcional)</label>
+                                <input type="url" id="raffle-image" class="form-control"
+                                    placeholder="https://ejemplo.com/imagen.jpg">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top: 12px;">
+                                🎉 Crear Rifa
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Preview -->
+                <div>
+                    <div class="raffle-info-card">
+                        <h2 style="margin-bottom: 16px;">Vista previa</h2>
+                        <div id="preview-container">
+                            <div class="info-row">
+                                <span class="info-label">Nombre</span>
+                                <span class="info-value" id="preview-name">—</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Boletos</span>
+                                <span class="info-value" id="preview-tickets">—</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Precio</span>
+                                <span class="info-value" id="preview-price">—</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Recaudación total</span>
+                                <span class="info-value" id="preview-total">—</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Fecha del sorteo</span>
+                                <span class="info-value" id="preview-date">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/firebase-config.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/create-raffle.js"></script>
+</body>
+
+</html>
