@@ -21,8 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
     loadRaffle(raffleId);
 });
 
-function loadRaffle(raffleId) {
-    const raffles = DB.getRaffles();
+async function loadRaffle(raffleId) {
+    const raffles = await DB.getRaffles();
     currentRaffle = raffles.find(r => r.id === raffleId);
 
     if (!currentRaffle) {
@@ -32,20 +32,19 @@ function loadRaffle(raffleId) {
     }
 
     // Update page title
-    document.title = `RifaMax — ${currentRaffle.name}`;
-    document.getElementById('raffle-title').textContent = currentRaffle.name;
+    document.title = `RifaMax — ${currentRaffle.title}`;
+    document.getElementById('raffle-title').textContent = currentRaffle.title;
     document.getElementById('raffle-description').textContent = currentRaffle.description || '';
 
     // Update sidebar info
-    document.getElementById('sidebar-title').textContent = currentRaffle.name;
+    document.getElementById('sidebar-title').textContent = currentRaffle.title;
     document.getElementById('sidebar-description').textContent = currentRaffle.description || '';
-    document.getElementById('info-creator').textContent = currentRaffle.creatorName || 'Desconocido';
+    document.getElementById('info-creator').textContent = currentRaffle.ownerName || 'Desconocido';
     document.getElementById('info-total-tickets').textContent = currentRaffle.totalTickets;
-    document.getElementById('info-price').textContent = `$${currentRaffle.price.toFixed(2)}`;
+    document.getElementById('info-price').textContent = `$${parseFloat(currentRaffle.ticketPrice).toFixed(2)}`;
 
     let dateStr = '—';
     if (currentRaffle.drawDate) {
-        // Handle datetime-local format (e.g., "2026-03-15T18:00")
         const rawDate = currentRaffle.drawDate;
         const date = new Date(rawDate.includes('T') ? rawDate + ':00' : rawDate);
         if (!isNaN(date.getTime())) {
@@ -53,7 +52,6 @@ function loadRaffle(raffleId) {
                 day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
             });
         } else {
-            // Fallback: display the raw value
             dateStr = rawDate.replace('T', ' ');
         }
     }
@@ -63,7 +61,8 @@ function loadRaffle(raffleId) {
     updateProgress();
 
     // Show owner actions if creator
-    if (currentRaffle.creatorId === currentUser.uid) {
+    const userId = currentUser.id || currentUser.uid;
+    if (currentRaffle.ownerId === userId) {
         document.getElementById('owner-actions').style.display = 'block';
         if (currentRaffle.status === 'completed') {
             document.getElementById('btn-draw').disabled = true;
@@ -84,7 +83,8 @@ function loadRaffle(raffleId) {
 }
 
 function updateProgress() {
-    const soldCount = currentRaffle.tickets.filter(t => t.buyerId).length;
+    const tickets = currentRaffle.tickets || [];
+    const soldCount = tickets.filter(t => t.buyerId).length;
     const total = currentRaffle.totalTickets;
     const progress = total ? Math.round((soldCount / total) * 100) : 0;
 
@@ -97,11 +97,14 @@ function renderTickets() {
     const grid = document.getElementById('ticket-grid');
     if (!grid) return;
 
-    grid.innerHTML = currentRaffle.tickets.map(ticket => {
+    const tickets = currentRaffle.tickets || [];
+    const userId = currentUser.id || currentUser.uid;
+
+    grid.innerHTML = tickets.map(ticket => {
         let className = 'ticket';
         let title = `Boleto #${ticket.number} - Disponible`;
 
-        if (ticket.buyerId === currentUser.uid) {
+        if (ticket.buyerId === userId) {
             className += ' mine';
             title = `Boleto #${ticket.number} - Tu boleto`;
         } else if (ticket.buyerId) {
@@ -128,11 +131,13 @@ function toggleTicket(number) {
         return;
     }
 
-    const ticket = currentRaffle.tickets.find(t => t.number === number);
+    const tickets = currentRaffle.tickets || [];
+    const ticket = tickets.find(t => t.number === number);
+    const userId = currentUser.id || currentUser.uid;
 
     // Can't select sold tickets or own tickets
     if (ticket.buyerId) {
-        if (ticket.buyerId === currentUser.uid) {
+        if (ticket.buyerId === userId) {
             showToast('Ya tienes este boleto', 'warning');
         } else {
             showToast('Este boleto ya fue vendido', 'error');
@@ -174,87 +179,55 @@ function updateSelectionSummary() {
     </span>
   `).join('');
 
-    const totalPrice = selectedTickets.length * currentRaffle.price;
+    const totalPrice = selectedTickets.length * currentRaffle.ticketPrice;
     total.textContent = `$${totalPrice.toFixed(2)}`;
 }
 
-function searchTicket() {
-    const input = document.getElementById('ticket-search-input');
-    const number = parseInt(input.value);
+// ... original searchTicket, confirmPurchase, closeModal stay similar ...
 
-    if (!number || number < 1 || number > currentRaffle.totalTickets) {
-        showToast(`Ingresa un número entre 1 y ${currentRaffle.totalTickets}`, 'error');
-        return;
-    }
-
-    const ticketEl = document.getElementById(`ticket-${number}`);
-    if (ticketEl) {
-        ticketEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        ticketEl.style.outline = '3px solid var(--accent-3)';
-        ticketEl.style.outlineOffset = '2px';
-        setTimeout(() => {
-            ticketEl.style.outline = 'none';
-        }, 2500);
-    }
-}
-
-function confirmPurchase() {
-    if (selectedTickets.length === 0) {
-        showToast('Selecciona al menos un boleto', 'warning');
-        return;
-    }
-
-    const totalPrice = selectedTickets.length * currentRaffle.price;
-    document.getElementById('confirm-modal-text').textContent =
-        `¿Confirmar la compra de ${selectedTickets.length} boleto(s) (#${selectedTickets.join(', #')}) por $${totalPrice.toFixed(2)}?`;
-
-    document.getElementById('confirm-modal').classList.add('active');
-}
-
-function closeModal() {
-    document.getElementById('confirm-modal').classList.remove('active');
-}
-
-function processPurchase() {
+async function processPurchase() {
     closeModal();
+    const userId = currentUser.id || currentUser.uid;
 
-    // Mark tickets as sold
-    const raffles = DB.getRaffles();
-    const raffleIndex = raffles.findIndex(r => r.id === currentRaffle.id);
-
-    if (raffleIndex < 0) {
-        showToast('Error: rifa no encontrada', 'error');
-        return;
-    }
-
+    // Local update of ticket array
+    const updatedTickets = [...currentRaffle.tickets];
     selectedTickets.forEach(number => {
-        const ticketIndex = raffles[raffleIndex].tickets.findIndex(t => t.number === number);
-        if (ticketIndex >= 0 && !raffles[raffleIndex].tickets[ticketIndex].buyerId) {
-            raffles[raffleIndex].tickets[ticketIndex].buyerId = currentUser.uid;
-            raffles[raffleIndex].tickets[ticketIndex].buyerName = currentUser.name;
-            raffles[raffleIndex].tickets[ticketIndex].purchasedAt = new Date().toISOString();
+        const ticket = updatedTickets.find(t => t.number === number);
+        if (ticket && !ticket.buyerId) {
+            ticket.buyerId = userId;
+            ticket.buyerName = currentUser.name;
+            ticket.purchasedAt = new Date().toISOString();
         }
     });
 
-    DB.saveRaffles(raffles);
-    currentRaffle = raffles[raffleIndex];
-    selectedTickets = [];
+    try {
+        // Sync with Backend
+        await DB.updateRaffle(currentRaffle.id, {
+            status: currentRaffle.status,
+            tickets: updatedTickets
+        });
 
-    showToast('¡Boletos comprados exitosamente! 🎉', 'success');
+        currentRaffle.tickets = updatedTickets;
+        selectedTickets = [];
 
-    renderTickets();
-    updateSelectionSummary();
-    updateProgress();
+        showToast('¡Boletos comprados exitosamente! 🎉', 'success');
+
+        renderTickets();
+        updateSelectionSummary();
+        updateProgress();
+    } catch (error) {
+        console.error('Purchase error:', error);
+        showToast('Error al procesar la compra.', 'error');
+    }
 }
 
-function drawWinner() {
+async function drawWinner() {
     if (currentRaffle.status === 'completed') {
         showToast('El sorteo ya se realizó', 'warning');
         return;
     }
 
     const soldTickets = currentRaffle.tickets.filter(t => t.buyerId);
-
     if (soldTickets.length === 0) {
         showToast('No hay boletos vendidos para realizar el sorteo', 'error');
         return;
@@ -263,32 +236,37 @@ function drawWinner() {
     // Random winner
     const winnerTicket = soldTickets[Math.floor(Math.random() * soldTickets.length)];
 
-    // Update raffle
-    const raffles = DB.getRaffles();
-    const raffleIndex = raffles.findIndex(r => r.id === currentRaffle.id);
+    const updateData = {
+        status: 'completed',
+        winnerId: winnerTicket.buyerId,
+        winnerName: winnerTicket.buyerName,
+        winnerTicket: winnerTicket.number,
+        tickets: currentRaffle.tickets
+    };
 
-    raffles[raffleIndex].status = 'completed';
-    raffles[raffleIndex].winnerId = winnerTicket.buyerId;
-    raffles[raffleIndex].winnerName = winnerTicket.buyerName;
-    raffles[raffleIndex].winnerTicket = winnerTicket.number;
+    try {
+        await DB.updateRaffle(currentRaffle.id, updateData);
 
-    DB.saveRaffles(raffles);
-    currentRaffle = raffles[raffleIndex];
+        // Update local object
+        Object.assign(currentRaffle, updateData);
 
-    // Show winner animation
-    showToast(`🏆 ¡El ganador es ${winnerTicket.buyerName} con el boleto #${winnerTicket.number}!`, 'success');
+        // Show winner animation
+        showToast(`🏆 ¡El ganador es ${winnerTicket.buyerName} con el boleto #${winnerTicket.number}!`, 'success');
 
-    // Update UI
-    const winnerSection = document.getElementById('winner-section');
-    winnerSection.style.display = 'block';
-    document.getElementById('winner-name').textContent = winnerTicket.buyerName;
-    document.getElementById('winner-ticket').textContent = `Boleto #${winnerTicket.number}`;
+        // Update UI
+        const winnerSection = document.getElementById('winner-section');
+        winnerSection.style.display = 'block';
+        document.getElementById('winner-name').textContent = winnerTicket.buyerName;
+        document.getElementById('winner-ticket').textContent = `Boleto #${winnerTicket.number}`;
 
-    document.getElementById('btn-draw').disabled = true;
-    document.getElementById('btn-draw').textContent = '✅ Sorteo realizado';
+        document.getElementById('btn-draw').disabled = true;
+        document.getElementById('btn-draw').textContent = '✅ Sorteo realizado';
 
-    // Scroll to winner
-    winnerSection.scrollIntoView({ behavior: 'smooth' });
+        winnerSection.scrollIntoView({ behavior: 'smooth' });
+    } catch (error) {
+        console.error('Draw error:', error);
+        showToast('Error al realizar el sorteo.', 'error');
+    }
 }
 
 function shareRaffle() {

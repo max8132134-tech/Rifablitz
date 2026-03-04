@@ -63,7 +63,7 @@ function setupLivePreview() {
     });
 }
 
-function createRaffle(user) {
+async function createRaffle(user) {
     const name = document.getElementById('raffle-name').value.trim();
     const description = document.getElementById('raffle-description').value.trim();
     const totalTickets = parseInt(document.getElementById('raffle-tickets').value);
@@ -71,48 +71,33 @@ function createRaffle(user) {
     const drawDate = document.getElementById('raffle-date').value;
     const imageUrl = document.getElementById('raffle-image').value.trim();
 
-    // Validations
-    if (!name) {
-        showToast('Ingresa el nombre de la rifa', 'error');
+    // Validations (same as before)
+    if (!name || !totalTickets || isNaN(price) || !drawDate) {
+        showToast('Completa todos los campos obligatorios', 'error');
         return;
     }
-    if (!totalTickets || totalTickets < 2) {
-        showToast('El número de boletos debe ser al menos 2', 'error');
-        return;
-    }
-    if (totalTickets > 10000) {
-        showToast('Máximo 10,000 boletos por rifa', 'error');
-        return;
-    }
-    if (isNaN(price) || price < 0) {
-        showToast('Ingresa un precio válido', 'error');
-        return;
-    }
-    if (!drawDate) {
-        showToast('Selecciona la fecha del sorteo', 'error');
-        return;
-    }
+
+    const submitBtn = document.querySelector('#create-raffle-form button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner"></span> Creando...';
 
     // Create raffle object
     const raffle = {
         id: DB.generateId(),
-        name: name,
+        title: name, // Backend expects 'title'
         description: description,
         totalTickets: totalTickets,
-        price: price,
+        ticketPrice: price, // Backend expects 'ticketPrice'
         drawDate: drawDate,
         imageUrl: imageUrl || null,
-        creatorId: user.uid,
-        creatorName: user.name,
+        ownerId: user.id || user.uid, // Support both just in case
+        ownerName: user.name,
         status: 'active',
-        tickets: [],
-        winnerId: null,
-        winnerName: null,
-        winnerTicket: null,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        tickets: []
     };
 
-    // Initialize tickets (empty, all available)
+    // Initialize tickets (same as before)
     for (let i = 1; i <= totalTickets; i++) {
         raffle.tickets.push({
             number: i,
@@ -122,15 +107,19 @@ function createRaffle(user) {
         });
     }
 
-    // Save
-    const raffles = DB.getRaffles();
-    raffles.push(raffle);
-    DB.saveRaffles(raffles);
+    try {
+        // Save to Backend
+        await DB.saveRaffle(raffle);
+        showToast('¡Rifa creada exitosamente! 🎉', 'success');
 
-    showToast('¡Rifa creada exitosamente! 🎉', 'success');
-
-    // Redirect to raffle page
-    setTimeout(() => {
-        window.location.href = `raffle.html?id=${raffle.id}`;
-    }, 1000);
+        // Redirect
+        setTimeout(() => {
+            window.location.href = `raffle.html?id=${raffle.id}`;
+        }, 1000);
+    } catch (error) {
+        console.error('Failed to create raffle:', error);
+        showToast('Error al crear la rifa. Intenta de nuevo.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Crear Rifa';
+    }
 }

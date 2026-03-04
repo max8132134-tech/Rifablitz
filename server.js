@@ -94,10 +94,102 @@ app.get('/api/users/:id', (req, res) => {
     }
 });
 
-// --- Raffle Routes (Placeholder) ---
+// --- User Routes ---
+// ... (existing user routes)
+
+// --- Raffle Routes ---
+
+// Create Raffle
+app.post('/api/raffles', (req, res) => {
+    const raffle = req.body;
+    if (!raffle.id || !raffle.ownerId || !raffle.title) {
+        return res.status(400).json({ error: 'Faltan campos obligatorios' });
+    }
+
+    try {
+        const stmt = db.prepare(`
+            INSERT INTO raffles (id, ownerId, ownerName, title, description, ticketPrice, totalTickets, drawDate, imageUrl, status, createdAt, tickets)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        stmt.run(
+            raffle.id,
+            raffle.ownerId,
+            raffle.ownerName,
+            raffle.title,
+            raffle.description || null,
+            raffle.ticketPrice,
+            raffle.totalTickets,
+            raffle.drawDate,
+            raffle.imageUrl || null,
+            raffle.status || 'active',
+            raffle.createdAt || new Date().toISOString(),
+            JSON.stringify(raffle.tickets || [])
+        );
+
+        res.status(201).json(raffle);
+    } catch (error) {
+        console.error('Create raffle error:', error);
+        res.status(500).json({ error: 'Error al crear la rifa' });
+    }
+});
+
+// Get All Raffles
 app.get('/api/raffles', (req, res) => {
-    const raffles = db.prepare('SELECT * FROM raffles').all();
-    res.json(raffles);
+    try {
+        const raffles = db.prepare('SELECT * FROM raffles').all();
+        // Parse tickets JSON for each raffle
+        const parsedRaffles = raffles.map(r => ({
+            ...r,
+            tickets: JSON.parse(r.tickets || '[]')
+        }));
+        res.json(parsedRaffles);
+    } catch (error) {
+        res.status(500).json({ error: 'Error al obtener rifas' });
+    }
+});
+
+// Update Raffle (Purchase or Draw)
+app.put('/api/raffles/:id', (req, res) => {
+    const { status, winnerId, winnerName, winnerTicket, tickets } = req.body;
+
+    try {
+        const stmt = db.prepare(`
+            UPDATE raffles 
+            SET status = ?, winnerId = ?, winnerName = ?, winnerTicket = ?, tickets = ?
+            WHERE id = ?
+        `);
+
+        stmt.run(
+            status,
+            winnerId || null,
+            winnerName || null,
+            winnerTicket || null,
+            JSON.stringify(tickets),
+            req.params.id
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Update raffle error:', error);
+        res.status(500).json({ error: 'Error al actualizar la rifa' });
+    }
+});
+
+// Get Raffle by ID
+app.get('/api/raffles/:id', (req, res) => {
+    try {
+        const raffle = db.prepare('SELECT * FROM raffles WHERE id = ?').get(req.params.id);
+        if (!raffle) {
+            return res.status(404).json({ error: 'Rifa no encontrada' });
+        }
+        res.json({
+            ...raffle,
+            tickets: JSON.parse(raffle.tickets || '[]')
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al obtener la rifa' });
+    }
 });
 
 app.listen(PORT, () => {

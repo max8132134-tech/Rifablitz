@@ -39,13 +39,48 @@ const DB = {
     }
   },
 
-  getRaffles() {
-    return JSON.parse(localStorage.getItem('rifas_raffles') || '[]');
+  async getRaffles() {
+    try {
+      const response = await fetch(`${API_URL}/raffles`);
+      return await response.json();
+    } catch (error) {
+      console.error('API Error:', error);
+      return [];
+    }
   },
 
-  saveRaffles(raffles) {
-    localStorage.setItem('rifas_raffles', JSON.stringify(raffles));
+  async saveRaffle(raffle) {
+    try {
+      const response = await fetch(`${API_URL}/raffles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(raffle)
+      });
+      if (!response.ok) throw new Error('Error saving raffle');
+      return await response.json();
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
+    }
   },
+
+  async updateRaffle(id, data) {
+    try {
+      const response = await fetch(`${API_URL}/raffles/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Error updating raffle');
+      return true;
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
+    }
+  },
+
+  // Keep localStorage version only for temporary state if needed, 
+  // but main data is now in DB.
 
   getCurrentUser() {
     const data = localStorage.getItem('rifas_current_user');

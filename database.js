@@ -18,12 +18,19 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS raffles (
     id TEXT PRIMARY KEY,
     ownerId TEXT NOT NULL,
+    ownerName TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
     ticketPrice REAL NOT NULL,
     totalTickets INTEGER NOT NULL,
+    drawDate TEXT NOT NULL,
+    imageUrl TEXT,
     status TEXT DEFAULT 'active',
+    winnerId TEXT,
+    winnerName TEXT,
+    winnerTicket INTEGER,
     createdAt TEXT NOT NULL,
+    tickets JSON,
     FOREIGN KEY (ownerId) REFERENCES users (id)
   );
 `);
