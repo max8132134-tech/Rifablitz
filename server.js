@@ -9,14 +9,31 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// 1. Diagnostic Endpoint (Very useful for troubleshooting)
+app.get('/debug/files', (req, res) => {
+    const fs = require('fs');
+    try {
+        const files = fs.readdirSync(__dirname);
+        const structure = files.map(f => {
+            const stats = fs.statSync(path.join(__dirname, f));
+            return { name: f, isDir: stats.isDirectory() };
+        });
+        res.json({ dirname: __dirname, files: structure });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. Serve static files FIRST
+app.use(express.static(__dirname));
+app.use('/js', express.static(path.join(__dirname, 'js')));
+app.use('/css', express.static(path.join(__dirname, 'css')));
+
 // Log all requests
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
     next();
 });
-
-// Serve static files explicitly
-app.use(express.static(path.join(__dirname)));
 
 // --- User Routes ---
 
