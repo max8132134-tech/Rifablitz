@@ -94,15 +94,15 @@ app.get('/api/users/:id', (req, res) => {
     }
 });
 
-// --- User Routes ---
-// ... (existing user routes)
-
 // --- Raffle Routes ---
 
 // Create Raffle
 app.post('/api/raffles', (req, res) => {
+    console.log('Create raffle request:', JSON.stringify(req.body, null, 2));
     const raffle = req.body;
+
     if (!raffle.id || !raffle.ownerId || !raffle.title) {
+        console.warn('Missing raffle fields:', { id: !!raffle.id, ownerId: !!raffle.ownerId, title: !!raffle.title });
         return res.status(400).json({ error: 'Faltan campos obligatorios' });
     }
 
@@ -115,22 +115,23 @@ app.post('/api/raffles', (req, res) => {
         stmt.run(
             raffle.id,
             raffle.ownerId,
-            raffle.ownerName,
+            raffle.ownerName || 'Desconocido',
             raffle.title,
             raffle.description || null,
-            raffle.ticketPrice,
-            raffle.totalTickets,
-            raffle.drawDate,
+            parseFloat(raffle.ticketPrice) || 0,
+            parseInt(raffle.totalTickets) || 0,
+            raffle.drawDate || '',
             raffle.imageUrl || null,
             raffle.status || 'active',
             raffle.createdAt || new Date().toISOString(),
             JSON.stringify(raffle.tickets || [])
         );
 
+        console.log('Raffle created successfully:', raffle.id);
         res.status(201).json(raffle);
     } catch (error) {
-        console.error('Create raffle error:', error);
-        res.status(500).json({ error: 'Error al crear la rifa' });
+        console.error('CRITICAL ERROR: Create raffle failed:', error);
+        res.status(500).json({ error: 'Error al crear la rifa: ' + error.message });
     }
 });
 
