@@ -1153,10 +1153,10 @@ select.form-control {
     display: flex;
     gap: 4px;
     margin-bottom: 24px;
-    background: #f0fdf4;
+    background: rgba(255, 255, 255, 0.05);
     padding: 4px;
     border-radius: var(--radius-md);
-    border: 1px solid rgba(22, 163, 74, 0.1);
+    border: 1px solid var(--border-main);
     width: fit-content;
 }
 
@@ -1174,10 +1174,8 @@ select.form-control {
 }
 
 .tab:hover {
-    color: var(--accent-1);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
 }
 
-.tab.active {
-    background: var(--accent-1);
-    color: #fff;
-}
+.tab.active { background: var(--accent-1); color: #064e3b; }
