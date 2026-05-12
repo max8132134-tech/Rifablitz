@@ -1,33 +1,11 @@
-// ===== Authentication & App Logic =====
-
-// Toast notifications
-function showToast(message, type = 'success') {
-    let container = document.querySelector('.toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.className = 'toast-container';
-        document.body.appendChild(container);
-    }
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    const icons = { success: '✅', error: '❌', warning: '⚠️' };
-    toast.innerHTML = `<span>${icons[type] || '💬'}</span><span>${message}</span>`;
-    container.appendChild(toast);
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(50px)';
-        setTimeout(() => toast.remove(), 300);
-    }, 3500);
-}
+// ===== Main App Logic =====
 
 // Check authentication
 function checkAuth() {
     const user = DB.getCurrentUser();
-    console.log('Checking auth status:', user ? 'Logged in' : 'Not logged in');
     if (!user) {
         const path = window.location.pathname;
-        if (!path.endsWith('index.html') && !path.endsWith('/') && !path.endsWith('login')) {
-            console.log('Not logged in, redirecting to index.html');
+        if (!path.endsWith('index.html') && !path.endsWith('/') && path.length > 1) {
             window.location.href = 'index.html';
         }
         return null;
@@ -35,7 +13,6 @@ function checkAuth() {
     return user;
 }
 
-// Require auth - redirect if not logged in
 function requireAuth() {
     const user = checkAuth();
     if (!user) return null;
@@ -43,132 +20,83 @@ function requireAuth() {
     return user;
 }
 
-// Update navbar with user info
 function updateNavbar(user) {
-    const userAvatar = document.querySelector('.navbar-user .user-avatar');
-    const userName = document.querySelector('.navbar-user .user-name');
-    if (userAvatar && user) {
-        userAvatar.textContent = user.name ? user.name.charAt(0).toUpperCase() : '?';
-    }
-    if (userName && user) {
-        userName.textContent = user.name || 'Usuario';
-    }
+    const userNameEl = document.querySelector('.user-name');
+    if (userNameEl) userNameEl.textContent = user.name;
+    const avatarEl = document.querySelector('.user-avatar');
+    if (avatarEl) avatarEl.textContent = user.name.charAt(0).toUpperCase();
 }
 
-// Logout
 function logout() {
     DB.setCurrentUser(null);
     window.location.href = 'index.html';
 }
 
-// Google Sign In (Demo Mode)
-function googleSignIn() {
-    return new Promise((resolve) => {
-        // Simulate Google sign in with a mock user
-        const mockGoogleUser = {
-            uid: DB.generateId(),
-            name: 'Usuario Google',
-            email: 'usuario@gmail.com',
-            photoURL: null,
-            provider: 'google'
-        };
-        resolve(mockGoogleUser);
+// Auth Page Initialization
+function initAuthPage() {
+    const nextBtn = document.getElementById('btn-next-step');
+    if (!nextBtn) return;
+
+    nextBtn.addEventListener('click', async () => {
+        const name = document.getElementById('user-name').value.trim();
+        const email = document.getElementById('user-email').value.trim();
+        const phone = document.getElementById('user-phone').value.trim();
+
+        if (!name || !email || !phone) {
+            showToast('Por favor, completa todos los campos', 'error');
+            return;
+        }
+
+        const currentUser = { id: 'u' + Date.now(), name, email, phone };
+        
+        // UI State: Loading
+        nextBtn.disabled = true;
+        nextBtn.innerHTML = 'Registrando...';
+
+        try {
+            const savedUser = await DB.saveUser(currentUser);
+            DB.setCurrentUser(savedUser);
+            
+            showToast(`¡Bienvenido, ${name}!`, 'success');
+            
+            // Success Screen
+            const authCard = document.querySelector('.auth-card');
+            if (authCard) {
+                authCard.innerHTML = `
+                    <div style="text-align:center; padding: 20px;">
+                        <h2 style="color:var(--accent-3);">¡Registro Exitoso!</h2>
+                        <p>Ya puedes empezar a crear tus rifas.</p>
+                        <br>
+                        <a href="dashboard.html" class="btn btn-primary btn-block">Ir al Panel de Control</a>
+                    </div>
+                `;
+            }
+            
+            setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
+
+        } catch (error) {
+            console.error('Registration error:', error);
+            nextBtn.disabled = false;
+            nextBtn.innerHTML = 'Registrarse y Entrar';
+            showToast('Error al conectar. Verifica los logs de Render.', 'error');
+        }
     });
 }
 
-// Auth page logic
-function initAuthPage() {
-    const nextBtn = document.getElementById('btn-next-step');
-
-    // Check if already logged in
-    const existing = DB.getCurrentUser();
-    if (existing && existing.phone) {
-        window.location.href = 'dashboard.html';
-        return;
-    }
-
-    // Register / Login
-    if (nextBtn) {
-        nextBtn.addEventListener('click', async () => {
-            const name = document.getElementById('user-name').value.trim();
-            const email = document.getElementById('user-email').value.trim();
-            const countryCode = document.getElementById('country-code').value;
-            const phoneNumber = document.getElementById('phone-number').value.trim();
-
-            if (!name) {
-                showToast('Ingresa tu nombre', 'error');
-                document.getElementById('user-name').focus();
-                return;
-            }
-            if (!email) {
-                showToast('Ingresa tu email', 'error');
-                document.getElementById('user-email').focus();
-                return;
-            }
-            if (!phoneNumber || phoneNumber.length < 7) {
-                showToast('Ingresa un número de teléfono válido', 'error');
-                document.getElementById('phone-number').focus();
-                return;
-            }
-
-            nextBtn.disabled = true;
-            nextBtn.innerHTML = '<span class="spinner" style="width:20px;height:20px;margin:0;border-width:2px;border-top-color:#fff;"></span> Registrando...';
-
-            const fullPhone = countryCode + phoneNumber;
-
-            const currentUser = {
-                id: DB.generateId(),
-                name: name,
-                email: email,
-                phone: fullPhone,
-                provider: 'local',
-                createdAt: new Date().toISOString()
-            };
-
-            // Save user to backend
-            try {
-                console.log('Sending registration to server:', currentUser);
-                const savedUser = await DB.saveUser(currentUser);
-                console.log('Server response:', savedUser);
-                
-                if (!savedUser || !savedUser.id) {
-                    throw new Error('El servidor no devolvió un usuario válido');
-                }
-
-                DB.setCurrentUser(savedUser);
-                console.log('User saved to localStorage:', DB.getCurrentUser());
-
-                showToast(`¡Bienvenido, ${name}!`, 'success');
-
-                // Forzar redirección inmediata y añadir un botón de respaldo por si falla
-                const authCard = document.querySelector('.auth-card');
-                if (authCard) {
-                    authCard.innerHTML = `
-                        <div style="text-align:center; padding: 20px;">
-                            <h2 style="color:var(--accent-3);">¡Registro Exitoso!</h2>
-                            <p>Redirigiendo al panel...</p>
-                            <br>
-                            <a href="dashboard.html" class="btn btn-primary">Si no redirige, haz clic aquí</a>
-                        </div>
-                    `;
-                }
-
-                setTimeout(() => {
-                    console.log('Redirecting to dashboard.html...');
-                    window.location.href = 'dashboard.html';
-                }, 500);
-            } catch (error) {
-                console.error('Registration failed:', error);
-                const errorMsg = error.message || 'Error al guardar el registro';
-                showToast(`${errorMsg}. Intenta de nuevo.`, 'error');
-                nextBtn.disabled = false;
-                nextBtn.innerHTML = 'Registrarse y Entrar';
-            }
-        });
-    }
+// Toast System
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
 }
 
-// Initialize auth page when DOM is ready
+// Auto-init
 document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('auth-step-1')) {
         initAuthPage();
