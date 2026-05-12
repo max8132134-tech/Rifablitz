@@ -12,7 +12,7 @@ let db;
 if (usePostgres) {
   console.log('--- MODO PRODUCCIÓN: Usando PostgreSQL (Supabase) ---');
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: process.env.DATABASE_URL ? process.env.DATABASE_URL.trim().replace(/^["']|["']$/g, '') : '',
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
