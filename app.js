@@ -23,8 +23,11 @@ function showToast(message, type = 'success') {
 // Check authentication
 function checkAuth() {
     const user = DB.getCurrentUser();
+    console.log('Checking auth status:', user ? 'Logged in' : 'Not logged in');
     if (!user) {
-        if (!window.location.pathname.endsWith('index.html') && !window.location.pathname.endsWith('/')) {
+        const path = window.location.pathname;
+        if (!path.endsWith('index.html') && !path.endsWith('/') && !path.endsWith('login')) {
+            console.log('Not logged in, redirecting to index.html');
             window.location.href = 'index.html';
         }
         return null;
@@ -133,7 +136,8 @@ function initAuthPage() {
                 showToast(`¡Bienvenido, ${name}!`, 'success');
 
                 setTimeout(() => {
-                    window.location.href = 'dashboard.html';
+                    console.log('Redirecting to dashboard...');
+                    window.location.assign('dashboard.html');
                 }, 1000);
             } catch (error) {
                 console.error('Registration failed:', error);
