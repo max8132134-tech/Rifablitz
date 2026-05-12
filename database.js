@@ -3,8 +3,15 @@ const Database = require('better-sqlite3');
 const path = require('path');
 require('dotenv').config();
 
-// Determinar si usar Postgres (Supabase) o SQLite
-const dbUrl = process.env.DATABASE_URL ? process.env.DATABASE_URL.trim().replace(/^["']|["']$/g, '') : null;
+// Limpiador ultra-robusto de URL
+let dbUrl = process.env.DATABASE_URL ? process.env.DATABASE_URL.trim() : null;
+if (dbUrl) {
+    // Buscar dónde empieza realmente la URL y descartar basura previa (comillas, espacios invisibles, etc)
+    const match = dbUrl.match(/postgresql:\/\/.+/);
+    if (match) {
+        dbUrl = match[0].replace(/["']/g, ''); // Tomar desde postgresql:// y quitar comillas internas si existen
+    }
+}
 const usePostgres = dbUrl && (dbUrl.includes('supabase.co') || dbUrl.includes('supabase.com') || process.env.NODE_ENV === 'production');
 
 let db;
