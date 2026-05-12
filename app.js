@@ -140,10 +140,23 @@ function initAuthPage() {
 
                 showToast(`¡Bienvenido, ${name}!`, 'success');
 
+                // Forzar redirección inmediata y añadir un botón de respaldo por si falla
+                const authCard = document.querySelector('.auth-card');
+                if (authCard) {
+                    authCard.innerHTML = `
+                        <div style="text-align:center; padding: 20px;">
+                            <h2 style="color:var(--accent-3);">¡Registro Exitoso!</h2>
+                            <p>Redirigiendo al panel...</p>
+                            <br>
+                            <a href="dashboard.html" class="btn btn-primary">Si no redirige, haz clic aquí</a>
+                        </div>
+                    `;
+                }
+
                 setTimeout(() => {
                     console.log('Redirecting to dashboard.html...');
-                    window.location.assign('dashboard.html');
-                }, 1000);
+                    window.location.href = 'dashboard.html';
+                }, 500);
             } catch (error) {
                 console.error('Registration failed:', error);
                 const errorMsg = error.message || 'Error al guardar el registro';
