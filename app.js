@@ -127,16 +127,21 @@ function initAuthPage() {
 
             // Save user to backend
             try {
-                // Simulate small delay for better UX
-                await new Promise(r => setTimeout(r, 800));
-                
+                console.log('Sending registration to server:', currentUser);
                 const savedUser = await DB.saveUser(currentUser);
+                console.log('Server response:', savedUser);
+                
+                if (!savedUser || !savedUser.id) {
+                    throw new Error('El servidor no devolvió un usuario válido');
+                }
+
                 DB.setCurrentUser(savedUser);
+                console.log('User saved to localStorage:', DB.getCurrentUser());
 
                 showToast(`¡Bienvenido, ${name}!`, 'success');
 
                 setTimeout(() => {
-                    console.log('Redirecting to dashboard...');
+                    console.log('Redirecting to dashboard.html...');
                     window.location.assign('dashboard.html');
                 }, 1000);
             } catch (error) {
