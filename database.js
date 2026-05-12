@@ -3,19 +3,25 @@ const Database = require('better-sqlite3');
 const path = require('path');
 require('dotenv').config();
 
-// Determinar qué base de datos usar (Por defecto SQLite localmente)
-const isProduction = process.env.NODE_ENV === 'production' || (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.co'));
-const usePostgres = isProduction && process.env.DATABASE_URL;
+// Determinar si usar Postgres (Supabase) o SQLite
+const dbUrl = process.env.DATABASE_URL ? process.env.DATABASE_URL.trim().replace(/^["']|["']$/g, '') : null;
+const usePostgres = dbUrl && (dbUrl.includes('supabase.co') || dbUrl.includes('supabase.com') || process.env.NODE_ENV === 'production');
 
 let db;
 
 if (usePostgres) {
-  console.log('--- MODO PRODUCCIÓN: Usando PostgreSQL (Supabase) ---');
+  console.log('--- MODO PRODUCCIÓN: Conectando a Supabase ---');
+  
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL ? process.env.DATABASE_URL.trim().replace(/^["']|["']$/g, '') : '',
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionString: dbUrl,
+    ssl: {
+      rejectUnauthorized: false // Requerido para Supabase desde la mayoría de plataformas
+    },
+    connectionTimeoutMillis: 10000, // 10 segundos para fallar si no conecta
+  });
+
+  pool.on('error', (err) => {
+    console.error('Error inesperado en el pool de Postgres:', err);
   });
 
   db = {
@@ -37,12 +43,13 @@ if (usePostgres) {
         }
       };
     },
-    async exec(sql) { return await pool.query(sql); }
+    async exec(sql) { 
+      return await pool.query(sql); 
+    }
   };
 } else {
-  console.log('--- MODO DESARROLLO: Usando SQLite Local (rifas.db) ---');
+  console.log('--- MODO DESARROLLO: Usando SQLite Local ---');
   const sqlite = new Database(path.resolve(__dirname, 'rifas.db'));
-  
   db = {
     prepare(sql) {
       const stmt = sqlite.prepare(sql);
@@ -82,15 +89,18 @@ const initDB = async () => {
       winnerName TEXT,
       winnerTicket INTEGER,
       createdAt TEXT NOT NULL,
-      tickets TEXT,
-      FOREIGN KEY (ownerId) REFERENCES users (id)
+      tickets TEXT
     );
   `;
   try {
+    console.log('Iniciando tablas...');
     await db.exec(sql);
-    console.log('Base de datos lista.');
+    console.log('✅ Base de datos lista y conectada.');
   } catch (err) {
-    console.error('Error al iniciar tablas:', err);
+    console.error('❌ Error crítico al iniciar la base de datos:', err.message);
+    if (err.message.includes('SSL')) {
+        console.error('Sugerencia: Revisa que la URL de Supabase termine en ?sslmode=require');
+    }
   }
 };
 
