@@ -75,31 +75,22 @@ function googleSignIn() {
 
 // Auth page logic
 function initAuthPage() {
-    const step1 = document.getElementById('auth-step-1');
-    const step2 = document.getElementById('auth-step-2');
-    const step3 = document.getElementById('auth-step-3');
     const nextBtn = document.getElementById('btn-next-step');
-    const phoneForm = document.getElementById('phone-form');
-    const verifyBtn = document.getElementById('btn-verify-code');
-
-    const existing = DB.getCurrentUser();
-    let currentUser = existing || null;
 
     // Check if already logged in
+    const existing = DB.getCurrentUser();
     if (existing && existing.phone) {
         window.location.href = 'dashboard.html';
         return;
-    } else if (existing) {
-        // If we have a user but no phone, skip Step 1
-        if (step1) step1.classList.remove('active');
-        if (step2) step2.classList.add('active');
     }
 
-    // Next Step / Login
+    // Register / Login
     if (nextBtn) {
         nextBtn.addEventListener('click', async () => {
             const name = document.getElementById('user-name').value.trim();
             const email = document.getElementById('user-email').value.trim();
+            const countryCode = document.getElementById('country-code').value;
+            const phoneNumber = document.getElementById('phone-number').value.trim();
 
             if (!name) {
                 showToast('Ingresa tu nombre', 'error');
@@ -111,94 +102,45 @@ function initAuthPage() {
                 document.getElementById('user-email').focus();
                 return;
             }
+            if (!phoneNumber || phoneNumber.length < 7) {
+                showToast('Ingresa un número de teléfono válido', 'error');
+                document.getElementById('phone-number').focus();
+                return;
+            }
 
             nextBtn.disabled = true;
-            nextBtn.innerHTML = '<span class="spinner" style="width:20px;height:20px;margin:0;border-width:2px;border-top-color:#fff;"></span> Continuando...';
+            nextBtn.innerHTML = '<span class="spinner" style="width:20px;height:20px;margin:0;border-width:2px;border-top-color:#fff;"></span> Registrando...';
 
-            // Simulate delay
-            await new Promise(r => setTimeout(r, 800));
+            const fullPhone = countryCode + phoneNumber;
 
-            currentUser = {
+            const currentUser = {
                 id: DB.generateId(),
                 name: name,
                 email: email,
+                phone: fullPhone,
                 provider: 'local',
                 createdAt: new Date().toISOString()
             };
 
-            // Persist partial user data
-            DB.setCurrentUser(currentUser);
-
-            showToast(`¡Hola, ${name}!`, 'success');
-
-            // Move to step 2 (phone)
-            step1.classList.remove('active');
-            step2.classList.add('active');
-
-            nextBtn.disabled = false;
-            nextBtn.innerHTML = 'Siguiente';
-        });
-    }
-
-    // Phone verification
-    if (phoneForm) {
-        phoneForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const countryCode = document.getElementById('country-code').value;
-            const phoneNumber = document.getElementById('phone-number').value;
-
-            if (!phoneNumber || phoneNumber.length < 7) {
-                showToast('Ingresa un número de teléfono válido', 'error');
-                return;
-            }
-
-            const fullPhone = countryCode + phoneNumber;
-
-            if (currentUser) {
-                currentUser.phone = fullPhone;
-                DB.setCurrentUser(currentUser);
-            }
-
-            // Move to step 3 (verification code)
-            step2.classList.remove('active');
-            step3.classList.add('active');
-
-            showToast('Código de verificación enviado (demo: usa 123456)', 'success');
-        });
-    }
-
-    // Verify code
-    if (verifyBtn) {
-        verifyBtn.addEventListener('click', async () => {
-            const code = document.getElementById('verification-code').value;
-
-            if (!code || code.length < 4) {
-                showToast('Ingresa un código válido (mínimo 4 dígitos)', 'error');
-                return;
-            }
-
-            // Demo: accept any code
-            verifyBtn.disabled = true;
-            verifyBtn.innerHTML = '<span class="spinner" style="width:20px;height:20px;margin:0;border-width:2px;"></span> Verificando...';
-
-            await new Promise(r => setTimeout(r, 1000));
-
             // Save user to backend
             try {
+                // Simulate small delay for better UX
+                await new Promise(r => setTimeout(r, 800));
+                
                 const savedUser = await DB.saveUser(currentUser);
                 DB.setCurrentUser(savedUser);
 
-                showToast('¡Registro completado exitosamente!', 'success');
+                showToast(`¡Bienvenido, ${name}!`, 'success');
 
                 setTimeout(() => {
                     window.location.href = 'dashboard.html';
-                }, 800);
+                }, 1000);
             } catch (error) {
                 console.error('Registration failed:', error);
                 const errorMsg = error.message || 'Error al guardar el registro';
                 showToast(`${errorMsg}. Intenta de nuevo.`, 'error');
-                verifyBtn.disabled = false;
-                verifyBtn.innerHTML = '✅ Verificar y entrar';
+                nextBtn.disabled = false;
+                nextBtn.innerHTML = 'Registrarse y Entrar';
             }
         });
     }
