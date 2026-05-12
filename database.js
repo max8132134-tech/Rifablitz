@@ -10,7 +10,19 @@ function parseDbUrl(urlStr) {
     if (!urlStr) return null;
     try {
         // Limpiar posibles comillas y espacios
-        const cleanUrl = urlStr.trim().replace(/["']/g, '');
+        let cleanUrl = urlStr.trim().replace(/["']/g, '');
+        
+        // Si empieza por // le falta el protocolo, se lo ponemos
+        if (cleanUrl.startsWith('//')) {
+            cleanUrl = 'postgresql:' + cleanUrl;
+        }
+        
+        // Si no empieza ni por postgres ni por postgresql, algo está muy mal
+        if (!cleanUrl.startsWith('postgres')) {
+            console.error('La URL no parece ser de Postgres. Empieza por:', cleanUrl.substring(0, 10));
+            return null;
+        }
+
         const url = new URL(cleanUrl);
         
         return {
