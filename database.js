@@ -5,29 +5,25 @@ require('dotenv').config();
 
 let db;
 
-// Intentar extraer los componentes de la URL manualmente para evitar errores de parsing
-function parseDbUrl(url) {
-    if (!url) return null;
+// Intentar extraer los componentes de la URL usando el constructor nativo de URL
+function parseDbUrl(urlStr) {
+    if (!urlStr) return null;
     try {
-        // Limpiar la URL de posibles comillas o espacios
-        const cleanUrl = url.trim().replace(/["']/g, '');
-        // Buscar el patrón: postgresql://usuario:password@host:port/database
-        const regex = /postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/([^?]+)/;
-        const match = cleanUrl.match(regex);
+        // Limpiar posibles comillas y espacios
+        const cleanUrl = urlStr.trim().replace(/["']/g, '');
+        const url = new URL(cleanUrl);
         
-        if (match) {
-            return {
-                user: match[1],
-                password: match[2],
-                host: match[3],
-                port: parseInt(match[4]),
-                database: match[5]
-            };
-        }
+        return {
+            user: decodeURIComponent(url.username),
+            password: decodeURIComponent(url.password),
+            host: url.hostname,
+            port: parseInt(url.port) || 5432,
+            database: url.pathname.substring(1).split('?')[0]
+        };
     } catch (e) {
-        console.error('Error al parsear URL:', e.message);
+        console.error('Error al procesar la URL de la base de datos:', e.message);
+        return null;
     }
-    return null;
 }
 
 const dbComponents = parseDbUrl(process.env.DATABASE_URL);
