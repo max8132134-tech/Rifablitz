@@ -3,28 +3,47 @@ const Database = require('better-sqlite3');
 const path = require('path');
 require('dotenv').config();
 
-// Limpiador ultra-robusto de URL
-let dbUrl = process.env.DATABASE_URL ? process.env.DATABASE_URL.trim() : null;
-if (dbUrl) {
-    // Buscar dónde empieza realmente la URL y descartar basura previa (comillas, espacios invisibles, etc)
-    const match = dbUrl.match(/postgresql:\/\/.+/);
-    if (match) {
-        dbUrl = match[0].replace(/["']/g, ''); // Tomar desde postgresql:// y quitar comillas internas si existen
-    }
-}
-const usePostgres = dbUrl && (dbUrl.includes('supabase.co') || dbUrl.includes('supabase.com') || process.env.NODE_ENV === 'production');
-
 let db;
 
-if (usePostgres) {
-  console.log('--- MODO PRODUCCIÓN: Conectando a Supabase ---');
-  
+// Intentar extraer los componentes de la URL manualmente para evitar errores de parsing
+function parseDbUrl(url) {
+    if (!url) return null;
+    try {
+        // Limpiar la URL de posibles comillas o espacios
+        const cleanUrl = url.trim().replace(/["']/g, '');
+        // Buscar el patrón: postgresql://usuario:password@host:port/database
+        const regex = /postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/([^?]+)/;
+        const match = cleanUrl.match(regex);
+        
+        if (match) {
+            return {
+                user: match[1],
+                password: match[2],
+                host: match[3],
+                port: parseInt(match[4]),
+                database: match[5]
+            };
+        }
+    } catch (e) {
+        console.error('Error al parsear URL:', e.message);
+    }
+    return null;
+}
+
+const dbComponents = parseDbUrl(process.env.DATABASE_URL);
+
+if (dbComponents) {
+  console.log('--- MODO PRODUCCIÓN: Conectando a Supabase (Manual) ---');
+  console.log(`Conectando a: ${dbComponents.host}:${dbComponents.port}`);
+
   const pool = new Pool({
-    connectionString: dbUrl,
-    ssl: {
-      rejectUnauthorized: false // Requerido para Supabase desde la mayoría de plataformas
-    },
-    connectionTimeoutMillis: 10000, // 10 segundos para fallar si no conecta
+    user: dbComponents.user,
+    password: dbComponents.password,
+    host: dbComponents.host,
+    port: dbComponents.port,
+    database: dbComponents.database,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 10000,
   });
 
   pool.on('error', (err) => {
@@ -50,9 +69,7 @@ if (usePostgres) {
         }
       };
     },
-    async exec(sql) { 
-      return await pool.query(sql); 
-    }
+    async exec(sql) { return await pool.query(sql); }
   };
 } else {
   console.log('--- MODO DESARROLLO: Usando SQLite Local ---');
@@ -102,15 +119,11 @@ const initDB = async () => {
   try {
     console.log('Iniciando tablas...');
     await db.exec(sql);
-    console.log('✅ Base de datos lista y conectada.');
+    console.log('✅ Base de datos lista.');
   } catch (err) {
-    console.error('❌ Error crítico al iniciar la base de datos:', err.message);
-    if (err.message.includes('SSL')) {
-        console.error('Sugerencia: Revisa que la URL de Supabase termine en ?sslmode=require');
-    }
+    console.error('❌ Error crítico:', err.message);
   }
 };
 
 initDB();
-
 module.exports = db;
